@@ -1,0 +1,7 @@
+.Python
+.env
+*.pyc
+bin/
+lib/
+include/
+
