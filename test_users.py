@@ -1,5 +1,5 @@
 import pg, db, sql
-from table import Record, Table, register_type
+from table import Record, Table
 
 class Users(Table):
    table = 'login_users'

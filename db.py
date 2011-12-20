@@ -91,3 +91,8 @@ class DB(object):
       rows = self.query(statement, *args, **kw)
       if rows:
          return rows[0]
+
+   def query_lazy(self, *args, **kw):
+      rows = self.query(*args, **kw)
+      for r in rows:
+         yield r

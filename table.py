@@ -121,6 +121,61 @@ class Table(object):
          else:
             return Exception('Got %d results, expected one' % len(r))
 
+   def select_value(self, **kw):
+      q = {'_from' : sql.escape_field(self.table)}
+      q.update(kw)
+      q['_where'] = self.where(q)
+      return self.db.query_value(sql.select(**q))
+      
+
+   def select_lazy(self, **kw):
+      q = {'_from' : sql.escape_field(self.table)}
+      q.update(kw)
+      q['_where'] = self.where(q)
+      return self.db.query_lazy(sql.select(**q),_factory=self.record)
+
+   def select_page(self, **kw):
+      page = kw.get('_page',1)
+      page_size = kw.get('_page_size',None)
+      if page_size:
+         q = dict(kw)
+         q['_offset'] = (page-1)*page_size
+         q['_limit'] = page_size
+         records = self.select_lazy(**q)
+         record_count = self.count(**q)
+         record_first = q['_offset']
+         record_last = min(record_count, q['_offset'] + page_size)
+
+         page_count = record_count / page_size
+         if record_count % page_size:
+            page_count += 1         
+      else:
+         records = self.select_lazy(**kw)
+         record_count = self.count(**kw)
+         record_first = 1
+         record_last = record_count
+         page_size = record_count
+         page_count = 1
+         
+      return {
+         '_page' : page, '_page_size' : page_size, '_page_count' : page_count, 
+         '_record_first' : record_first,'_record_last' : record_last,'_record_count' : record_count, 
+         '_records' : records}
+
+   def count(self, **kw):
+      d = dict(kw)
+      d['_fields'] = 'count(*)'
+      d.pop('_order',None)
+      d.pop('_limit',None)
+      d.pop('_offset',None)
+      return self.select_value(**d)
+
+   def select_lazy(self, **kw):
+      print 'running select'
+      results = self.select(**kw)
+      for r in results:
+         yield r
+
    def insert(self, data, returning=None):
       pk = self.pk
       if self.pk_seq and data.get('pk') is None:
