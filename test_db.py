@@ -23,8 +23,9 @@ def test_documents():
       documents = Documents(d)
       for r in documents.select(_order='released desc',_limit=5):
          print r.path
-         print '  ',documents[r.path].author
-         
+         #print sql.compile_clause(sql.id_clause(Documents.pk,r.path))
+         print '  ',documents[r.path]
+      return
       print '---'
       for r in documents.select(_order='released desc',_limit=50):
          print r.title.encode('utf8')

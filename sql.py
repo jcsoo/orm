@@ -69,7 +69,6 @@ def nest(v):
    return '('+v+')'
 
 def compile_clause(c):
-   print c
    if c is None:
       return None
    if type(c) == tuple:
@@ -80,24 +79,26 @@ def compile_clause(c):
          return op.upper()+' '+nest(compile_clause(rest[0]))
       elif op in ('and','or'):
          rest = [compile_clause(r) for r in rest if r]
-         if rest:
+         if len(rest) == 1:
+            return rest[0]
+         elif len(rest) > 1:
             return nest((' '+op.upper()+' ').join(rest))
       elif op == '=':
          if len(rest) > 2:
             raise Exception("More than two arguments passed to '=' operator: %s" % rest)
          if type(rest[1]) == tuple:
             op = ' IN '
-         return nest(escape_field(rest[0]) + op + escape(rest[1]))
+         return escape_field(rest[0]) + op + escape(rest[1])
       elif op == '!=':
          if len(rest) > 2:
             raise Exception("More than two arguments passed to '!=' operator: %s" % rest)
          if type(rest[1]) == tuple:
             op = ' NOT IN '
-         return nest(escape_field(rest[0]) + op + escape(rest[1]))
+         return escape_field(rest[0]) + op + escape(rest[1])
       else:
          if len(rest) > 2:
             raise Exception("More than two arguments passed to '%s' operator: %s" % (op,rest))
-         return nest(escape_field(rest[0]) + op + escape(rest[1]))
+         return escape_field(rest[0]) + op + escape(rest[1])
    elif type(c) == list:
       if c:
          return compile_clause(tuple(['and'] + c))
@@ -106,6 +107,24 @@ def compile_clause(c):
          return compile_clause(tuple(['and'] + [('=',k,v) for k,v in c.items()]))
    else:
       return c
+
+def id_clause(pk,pk_value):
+   if type(pk) == tuple:
+      o_list = ['or']
+      for v in to_list(pk_value):
+         if type(v) != tuple or len(v) != len(pk):
+            raise Exception('primary key value must be tuple of length %s' % len(pk))
+         c_list = ['and']
+         for i in range(len(v)):
+            c_list.append(('=',pk[i],v[i]))
+         o_list.append(tuple(c_list))
+      return tuple(o_list)
+   else:
+      if type(pk_value) == list:
+         return ('=',pk,tuple(pk_value))
+      else:
+         return ('=',pk,pk_value)
+      
 
 def make_clause(c):
    if type(c) == tuple:
@@ -159,7 +178,6 @@ def select(**kw):
 
    if kw.get('_offset'):
       s.append('offset %s' % kw.get('_offset'))
-
    return ' '.join([c for c in s if c])
 
 def insert(table, data, returning=None):
@@ -167,14 +185,17 @@ def insert(table, data, returning=None):
    for k,v in data.items():
       fields.append(escape_field(k))
       values.append(escape(v))
-   q = "insert into %s (%s) values (%s)" % (escape_field(table), ','.join(fields),','.join(values))
+   q = "insert into %s" % escape_field(table)
+   if data:
+      q += " (%s) values (%s)" % (','.join(fields),','.join(values))
    if returning:
       q += ' returning %s' % returning
    return q
 
 def update(table, data, **kw):
-   s = ['update %s set' % escape_field(table)]
-   s.append(','.join([escape_field(k)+'='+escape(v) for k,v in data.items()]))
+   s = ['update %s' % escape_field(table)]
+   if data:
+      s.append('set '+', '.join([escape_field(k)+'='+escape(v) for k,v in data.items()]))
    if kw.get('_where'):
       s.append(build_where(kw.get('_where')))
    if kw.get('_returning'):

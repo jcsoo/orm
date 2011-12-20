@@ -52,7 +52,6 @@ class DB(object):
       return self.conn.cursor()
 
    def execute(self, statement, *args, **kw):
-      #print sql.fill(statement, *args, **kw)
       c = self.cursor()
       c.execute(sql.fill(statement, *args, **kw))      
       return c
