@@ -73,8 +73,8 @@ class Table(object):
          r = default
       return r
 
-   def filter(self, **kw):
-      flist = [sql.escape_field(k)+'='+sql.escape(kw.pop(k)) for k in self.fields if k in kw]
+   def filter(self, kw):
+      flist = [('=',k,kw.pop(k)) for k in self.fields if k in kw]
       for k in kw:
          if hasattr(self, k):
             f = getattr(self,k)(kw.pop(k))
@@ -82,10 +82,14 @@ class Table(object):
                flist.append(f)
       return flist
 
+   def where(self, kw):
+      return ('and', kw.get('_where'), self.filter(kw))
+
+
    def select(self, **kw):
       q = {'_from' : self.table}
       q.update(kw)
-      q.setdefault('_where_list',[]).extend(self.filter(**kw))
+      q['_where'] = self.where(kw)
       return self.db.query(sql.select(**q),_factory=self.rclass)
 
    def select_one(self, **kw):

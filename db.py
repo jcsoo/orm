@@ -2,6 +2,10 @@ from collections import namedtuple
 from table import Record
 import sql
 
+class DBTest(object):
+   def query(self, statement, *args, **kw):
+      return statement
+
 class DB(object):
    def __init__(self, pool, commit_on_exit=False):
       self.pool = pool

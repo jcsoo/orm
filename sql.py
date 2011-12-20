@@ -2,7 +2,7 @@ import re, sys, datetime, decimal
 
 FILL_RE = re.compile('{(.*?)}')
 
-class SQLLiteral(object):
+class Literal(object):
    def __init__(s):
       self.s = s
 
@@ -10,7 +10,7 @@ class SQLLiteral(object):
       return self.s
 
 def literal(s):
-   return SQLLiteral(s)
+   return Literal(s)
 
 def escape_field(v):
    if v.find('"') >= 0:
@@ -21,7 +21,7 @@ def escape(v,blank_null=True):
    t = type(v)
    if v is None:
       return 'null'
-   elif isinstance(v,SQLLiteral):
+   elif isinstance(v,Literal):
       return v.s
    elif t in (int, long):
       return '%d' % v
@@ -65,6 +65,48 @@ def to_tuple(v):
    else:
       return (v,)
 
+def nest(v):
+   return '('+v+')'
+
+def compile_clause(c):
+   print c
+   if c is None:
+      return None
+   if type(c) == tuple:
+      op, rest = c[0],c[1:]
+      if op in ('not',):
+         if len(rest) > 1:
+            raise Exception("More than one argument passed to 'not' operator: %s" % rest)
+         return op.upper()+' '+nest(compile_clause(rest[0]))
+      elif op in ('and','or'):
+         rest = [compile_clause(r) for r in rest if r]
+         if rest:
+            return nest((' '+op.upper()+' ').join(rest))
+      elif op == '=':
+         if len(rest) > 2:
+            raise Exception("More than two arguments passed to '=' operator: %s" % rest)
+         if type(rest[1]) == tuple:
+            op = ' IN '
+         return nest(escape_field(rest[0]) + op + escape(rest[1]))
+      elif op == '!=':
+         if len(rest) > 2:
+            raise Exception("More than two arguments passed to '!=' operator: %s" % rest)
+         if type(rest[1]) == tuple:
+            op = ' NOT IN '
+         return nest(escape_field(rest[0]) + op + escape(rest[1]))
+      else:
+         if len(rest) > 2:
+            raise Exception("More than two arguments passed to '%s' operator: %s" % (op,rest))
+         return nest(escape_field(rest[0]) + op + escape(rest[1]))
+   elif type(c) == list:
+      if c:
+         return compile_clause(tuple(['and'] + c))
+   elif type(c) == dict:
+      if c:
+         return compile_clause(tuple(['and'] + [('=',k,v) for k,v in c.items()]))
+   else:
+      return c
+
 def make_clause(c):
    if type(c) == tuple:
       k,v = c[:2]
@@ -88,8 +130,8 @@ def join_clauses(c_op, c_list):
       return (' '+c_op+' ').join(['(%s)' % make_clause(c) for c in c_list])
 
 
-def build_where(w, w_op='AND'):
-   where_clause = join_clauses(w_op, to_list(w))
+def build_where(w):
+   where_clause = compile_clause(w)
    if where_clause:
       return 'where ' + where_clause
 
@@ -98,30 +140,25 @@ def select(**kw):
    kw = dict(kw)
    s = ['select']
 
-   s.append(kw.pop('_fields','*'))
+   s.append(kw.get('_fields','*'))
 
    if kw.get('_from'):
-      s.append('from %s' % kw.pop('_from'))
+      s.append('from %s' % kw.get('_from'))
 
-   #if kw.get('_where') is not None or kw.get('_filter') is not None:
-   #   s.append(build_where(kw.pop('_where',''),kw.pop('_where_op','AND'),kw.pop('_filter',[])))
-
-   s.append(build_where(kw))
+   if kw.get('_where'):
+      s.append(build_where(kw.get('_where')))
 
    if kw.get('_group'):
-      s.append('group by %s' % kw.pop('_group'))   
+      s.append('group by %s' % kw.get('_group'))   
 
    if kw.get('_order'):
-      s.append('order by %s' % kw.pop('_order'))
+      s.append('order by %s' % kw.get('_order'))
 
    if kw.get('_limit'):
-      s.append('limit %s' % kw.pop('_limit'))
+      s.append('limit %s' % kw.get('_limit'))
 
    if kw.get('_offset'):
-      s.append('offset %s' % kw.pop('_offset'))
-
-   #if kw.keys():
-   #   raise Exception('Unknown keyword(s): %s' % kw.keys())
+      s.append('offset %s' % kw.get('_offset'))
 
    return ' '.join([c for c in s if c])
 
@@ -130,56 +167,24 @@ def insert(table, data, returning=None):
    for k,v in data.items():
       fields.append(escape_field(k))
       values.append(escape(v))
-   q = "insert into %s (%s) values (%s)" % (table, ','.join(fields),','.join(values))
+   q = "insert into %s (%s) values (%s)" % (escape_field(table), ','.join(fields),','.join(values))
    if returning:
       q += ' returning %s' % returning
    return q
 
 def update(table, data, **kw):
-   s = ['update %s set' % table]
-   for k,v in data.items():
-      s.append(escape_field(k)+'='+escape(v))
-   s.append(build_where(kw))
+   s = ['update %s set' % escape_field(table)]
+   s.append(','.join([escape_field(k)+'='+escape(v) for k,v in data.items()]))
+   if kw.get('_where'):
+      s.append(build_where(kw.get('_where')))
    if kw.get('_returning'):
-      s.append('returning %s' % kw['returning'])
+      s.append('returning %s' % kw['_returning'])
    return ' '.join([c for c in s if c])   
 
 def delete(table, **kw):
-   s = ['delete from %s' % table]
-   s.append(build_where(kw))
+   s = ['delete from %s' % escape_field(table)]
+   if kw.get('_where'):
+      s.append(build_where(kw.get('_where')))
    if kw.get('_returning'):
-      s.append('returning %s' % kw['returning'])
+      s.append('returning %s' % kw['_returning'])
    return ' '.join([c for c in s if c])   
-
-
-
-def update_1(table, data, id=None, id_field='id', _where=None, _where_list=None, returning=None):
-   s = []
-   for k,v in data.items():
-      s.append(escape_field(k)+'='+escape(v))
-   if id:
-      w = 'where '+id_clause(id, id_field)
-   elif _where:
-      w = build_where(_where, w_filter=_filter)
-   else:
-      raise Exception('id or where clause must be specified')
-
-   q = "update %s set %s %s" % (table, ','.join(s), w)
-   if returning:
-      q += ' returning %s' % returning
-   return q
-
-
-def delete_1(table, id=None, id_field='id', _where=None, _where_list=None,returning=None):
-   if id:
-      w = 'where ' + id_clause(id, id_field)
-   elif _where or _filter:
-      w = build_where(_where,w_filter=_filter)
-   else:
-      raise Exception('id or filter or where clause must be specified')
-
-   q = 'delete from %s %s' % (table, w)
-   if returning:
-      q += ' returning %s' % returning
-   return q
-
