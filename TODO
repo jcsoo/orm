@@ -1,0 +1,7 @@
+Lazy evaluation + Pagination (slice protocol)
+implement as iterator
+implement next_id
+
+setup test cases
+
+import / export 
