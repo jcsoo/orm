@@ -5,6 +5,9 @@ def register_type(tclass, rclass=None):
       rclass = Record
    tclass.rclass = rclass
 
+class NotExist(object):
+   pass
+
 class Record(object):
    def __init__(self, db, table, *args, **kw):
       self._db = db
@@ -20,6 +23,34 @@ class Record(object):
             setattr(self, k, None)
          for k,v in kw.items():
             setattr(self, k, v)
+
+   def __getitem__(self, k):
+      v = self.get(k, NotExist)
+      if v == NotExist:
+         raise KeyError(k)
+      return v
+
+   def __setitem__(self, k, v):
+      self.set(k,v)
+
+   def __contains__(self, key):
+      return self.has_key(key)
+
+   def get(self, k, default=None):
+      return getattr(self, k, default)
+
+   def set(self, k, v):
+      setattr(self, k, v)
+
+   def keys(self):
+      return self._table.fields
+
+   def items(self):
+      return [(k,getattr(self,k)) for k in self.keys()]
+
+   def has_key(self, key):
+      return hasattr(self, key)
+
 
    @property
    def _id(self):
@@ -158,7 +189,7 @@ class Table(object):
          page_count = 1
          
       return {
-         '_page' : page, '_page_size' : page_size, '_page_count' : page_count, 
+         '_page' : page, '_page_size' : page_size, '_page_count' : page_count, '_multiple_pages' : (page_count > 1),
          '_record_first' : record_first,'_record_last' : record_last,'_record_count' : record_count, 
          '_records' : records}
 
@@ -171,7 +202,6 @@ class Table(object):
       return self.select_value(**d)
 
    def select_lazy(self, **kw):
-      print 'running select'
       results = self.select(**kw)
       for r in results:
          yield r
@@ -187,7 +217,6 @@ class Table(object):
       q = {}
       q.update(kw)
       q['_where'] = self.where(q)
-      print sql.update(self.table, data, **q)
       return self.db.query(sql.update(self.table, data, **q))
    
    def delete(self, **kw):

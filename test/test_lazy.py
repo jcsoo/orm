@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../src')
 import pg, db, sql, table
 
 class Documents(table.Table):
@@ -47,8 +49,11 @@ def test_page():
          print r.released, r.title
 
       print '---'
-      p = documents.select_page(_order='released desc',section='Number of The Day',_page=4,_page_size=100)
+      p = documents.select_page(_order='released desc',section='Number of The Day',_page=4,_page_size=5)
       print p
+      for r in p['_records']:
+         print r['title']
+      
 
 
 

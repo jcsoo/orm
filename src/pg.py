@@ -17,7 +17,7 @@ def parse_url(s):
 
 
 def make_pool_url(minconn, maxconn, url):
-   return psycopg2.pool.SimpleConnectionPool(minconn,maxconn,**parse_url(s))
+   return psycopg2.pool.SimpleConnectionPool(minconn,maxconn,**parse_url(url))
 
 def make_pool(minconn, maxconn, **kw):
    return psycopg2.pool.SimpleConnectionPool(minconn,maxconn,**kw)
