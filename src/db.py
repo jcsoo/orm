@@ -12,6 +12,7 @@ class DB(object):
       self.conn = None
       self.in_context = True
       self.commit_on_exit = commit_on_exit
+      self.debug = False
 
    def open(self):
       self.conn = self.pool.getconn()
@@ -53,7 +54,10 @@ class DB(object):
 
    def execute(self, statement, *args, **kw):
       c = self.cursor()
-      c.execute(sql.fill(statement, *args, **kw))      
+      s = sql.fill(statement, *args, **kw)
+      if 1 or self.debug:
+         print s
+      c.execute(s)
       return c
 
    def query_rows(self, statement, *args, **kw):

@@ -115,12 +115,29 @@ class Table(object):
       return r
 
    def filter(self, kw):
+      keys = kw.keys()
+      flist = []
+      for k in keys:
+         if hasattr(self, k):
+            f = getattr(self,k)(kw[k])
+            if f:
+               flist.append(f)
+         elif k == '_id':
+            flist.append(sql.id_clause(self.pk, kw.pop('_id')))
+            continue
+         elif k in self.fields:
+            flist.append(('=',k,kw[k]))
+            continue
+      return flist
+
+
+   def filter_old(self, kw):
       flist = [('=',k,kw.pop(k)) for k in self.fields if k in kw]
       if '_id' in kw:
          flist.append(sql.id_clause(self.pk, kw.pop('_id')))
       for k in kw:
          if hasattr(self, k):
-            f = getattr(self,k)(kw.pop(k))
+            f = getattr(self,k)(kw[k])
             if f:
                flist.append(f)
       return flist
