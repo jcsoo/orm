@@ -104,7 +104,14 @@ class Table(object):
          raise KeyError(k)
       else:
          return v
-
+      
+   def _get_id(self, r):
+      pk = self.pk
+      if type(pk) == tuple:
+         return tuple([r[k] for k in pk])
+      else:
+         return r[k]
+      
    def record(self, db, *args, **kw):
       return self.rclass(db, self, *args)
 
@@ -114,6 +121,15 @@ class Table(object):
          r = default
       return r
 
+   def get_or_new(self, k, default=None):
+      if k is None:
+         if default is None:
+            return {}
+         else:
+            return default
+      else:
+         return self[k]
+   
    def filter(self, kw):
       keys = kw.keys()
       flist = []
@@ -185,6 +201,7 @@ class Table(object):
    def select_page(self, **kw):
       page = kw.get('_page',1)
       page_size = kw.get('_page_size',None)
+      order = kw.get('_order',None)
       if page_size:
          q = dict(kw)
          q['_offset'] = (page-1)*page_size
@@ -204,9 +221,9 @@ class Table(object):
          record_last = record_count
          page_size = record_count
          page_count = 1
-         
+
       return {
-         '_page' : page, '_page_size' : page_size, '_page_count' : page_count, '_multiple_pages' : (page_count > 1),
+         '_page' : page, '_page_size' : page_size, '_page_count' : page_count, '_order' : order, '_multiple_pages' : (page_count > 1),
          '_record_first' : record_first,'_record_last' : record_last,'_record_count' : record_count, 
          '_records' : records}
 
@@ -224,11 +241,12 @@ class Table(object):
          yield r
 
    def insert(self, data, returning=None):
+      d = dict([(k,data.get(k)) for k in self.fields])              
       pk = self.pk
-      if self.pk_seq and data.get('pk') is None:
-         data[pk] = self.next_id()
+      if self.pk_seq and d[pk] is None:
+         d[pk] = self.next_id()
 
-      return self.db.query(sql.insert(self.table, data, returning))
+      return self.db.query(sql.insert(self.table, d, returning))
 
    def update(self, data, **kw):
       q = {}
