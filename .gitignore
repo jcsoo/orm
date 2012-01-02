@@ -1,7 +1,6 @@
 .Python
 .env
 *.pyc
-bin/
-lib/
-include/
-
+build/
+dist/
+*.egg-info/
