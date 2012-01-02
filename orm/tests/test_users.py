@@ -1,5 +1,7 @@
-import pg, db, sql
-from table import Record, Table
+import orm.pg as pg
+import orm.db as db
+import orm.sql as sql
+from orm.table import Record, Table
 
 class Users(Table):
    table = 'login_users'
@@ -16,7 +18,6 @@ class UserRoles(Table):
    pk = ('user','role')
 
 #register_type(UserRoles)
-
 
 pool = pg.make_pool(1,10,database='hello')
 

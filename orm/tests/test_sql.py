@@ -1,6 +1,6 @@
 import unittest
 import datetime, decimal
-from sql import *
+from orm.sql import *
 
 class SQLTestCase(unittest.TestCase):
    def testEscape(self):

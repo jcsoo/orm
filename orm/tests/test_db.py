@@ -1,6 +1,7 @@
-import pg, db, sql, table
-
-pool = pg.make_pool(1,10,database='hello')
+import orm.pg as pg
+import orm.db as db
+import orm.sql as sql
+import orm.table as table
 
 class Document(table.Record):
    @property
@@ -34,4 +35,5 @@ def test_documents():
 
 
 if __name__ == '__main__':
+   pool = pg.make_pool(1,10,database='hello')
    test_documents()

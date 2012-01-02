@@ -245,7 +245,6 @@ class Table(object):
       pk = self.pk
       if self.pk_seq and d[pk] is None:
          d[pk] = self.next_id()
-
       return self.db.query(sql.insert(self.table, d, returning))
 
    def update(self, data, **kw):

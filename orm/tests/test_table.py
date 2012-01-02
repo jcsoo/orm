@@ -1,6 +1,6 @@
 import unittest
-from db import DBTest
-from table import *
+from orm.db import DBTest
+from orm.table import *
 
 d = DBTest()
 
@@ -44,7 +44,7 @@ class TableTestCase(unittest.TestCase):
       self.assertEquals(self.t2.select(_id=(1,2)),'select * from "test_table_2" where ("a"=1 AND "b"=2)')
 
    def testInsert(self):
-      self.assertEquals(self.t.insert({'abc':'123','def':'456'}),'insert into "test_table" ("abc","def") values (\'123\',\'456\')')
+      self.assertEquals(self.t.insert({'id' : 123, 'first_name':'123','last_name':'456'}),'insert into "test_table" ("first_name","last_name","id") values (\'123\',\'456\',123)')
 
    def testUpdate(self):
       self.assertEquals(self.t.update({}),'update "test_table"')

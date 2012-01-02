@@ -1,6 +1,7 @@
-import sys
-sys.path.append('../src')
-import pg, db, sql, table
+import orm.pg as pg
+import orm.db as db
+import orm.sql as sql
+import orm.table as table
 
 class Documents(table.Table):
    table = 'documents'
@@ -10,8 +11,6 @@ class Documents(table.Table):
    def _author(self, value, **kw):
       return 'author ilike %s' % sql.escape('%%%s%%' % value.lower())
 
-
-pool = pg.make_pool(1,10,database='hello')
 
 def test_lazy():
    with db.DB(pool) as d:
@@ -58,4 +57,5 @@ def test_page():
 
 
 if __name__ == '__main__':
+   pool = pg.make_pool(1,10,database='hello')
    test_page()
