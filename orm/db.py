@@ -55,7 +55,7 @@ class DB(object):
    def execute(self, statement, *args, **kw):
       c = self.cursor()
       s = sql.fill(statement, *args, **kw)
-      if 1 or self.debug:
+      if self.debug:
          print s
       c.execute(s)
       return c
