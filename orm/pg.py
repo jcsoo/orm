@@ -6,13 +6,21 @@ def parse_url(s):
    u = urlparse(s)
    d = {}
    if u.netloc:
-      d['host'] = u.netloc
-   if u.username:
-      d['user'] = u.username
-   if u.password:
-      d['password'] = u.password
+      n = u.netloc
+      if '@' in n:
+         n_arr = n.split('@')
+         d['host'] = n_arr[1]
+         if ':' in n_arr[0]:
+            p_arr = n_arr[0].split(':')
+            d['user'] = p_arr[0]
+            d['password'] = p_arr[1]
+         else:
+            d['user'] = n_arr[0]
+      else:
+         d['host'] = u.netloc
    if u.path:
       d['database'] = u.path[1:]
+   print 'parse_url:',d
    return d
 
 
