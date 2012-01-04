@@ -20,7 +20,6 @@ def parse_url(s):
          d['host'] = u.netloc
    if u.path:
       d['database'] = u.path[1:]
-   print 'parse_url:',d
    return d
 
 

@@ -12,6 +12,7 @@ class Record(object):
    def __init__(self, db, table, *args, **kw):
       self._db = db
       self._table = table
+      self._cache = {}
       fields = self._table.fields
       if args:
          if len(args) != len(fields):
@@ -27,7 +28,10 @@ class Record(object):
    def __getitem__(self, k):
       v = self.get(k, NotExist)
       if v == NotExist:
-         raise KeyError(k)
+         if hasattr(self, k):
+            return getattr(self, k)
+         else:
+            raise KeyError(k)
       return v
 
    def __setitem__(self, k, v):
@@ -87,6 +91,7 @@ class Record(object):
 
 class Table(object):
    rclass = Record
+   name = None
    table = None
    fields = []
    pk = None
@@ -94,9 +99,14 @@ class Table(object):
 
    def __init__(self, db):
       self.db = db
+      self.db.tables[self.__class__.get_name()] = self
 
    def __str__(self):
-      return self.__class__.__name__
+      return self.__class__.get_name()
+
+   @classmethod
+   def get_name(cls):
+      return cls.name or cls.__name__
 
    def __getitem__(self, k):
       v = self.get(k)

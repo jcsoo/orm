@@ -12,7 +12,17 @@ class DB(object):
       self.conn = None
       self.in_context = True
       self.commit_on_exit = commit_on_exit
+      self.tables = {}
       self.debug = False
+
+   def __len__(self):
+      return len(self.tables)
+
+   def __getitem__(self, k):
+      return self.tables[k]
+
+   def __setitem__(self, k, v):
+      self.tables[k] = v
 
    def open(self):
       self.conn = self.pool.getconn()
