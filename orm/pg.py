@@ -1,5 +1,20 @@
+import decimal, re
 import psycopg2, psycopg2.pool
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+
+
+def cast_money(value, cur):
+   if value is None:
+      return None
+   value = value.replace('$','').replace(',','')
+   m = re.match(r'^(-?)\d+\.\d+$', value)
+   if m:
+      return decimal.Decimal(value)
+   else:
+      raise psycopg2.InterfaceError('Bad money representation: %s' % value)
+
+MONEY = psycopg2.extensions.new_type((790,),'MONEY',cast_money)
+psycopg2.extensions.register_type(MONEY)
 
 def parse_url(s):   
    from urlparse import urlparse

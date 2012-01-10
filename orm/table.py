@@ -250,12 +250,12 @@ class Table(object):
       for r in results:
          yield r
 
-   def insert(self, data, returning=None):
+   def insert(self, data, returning='*'):
       d = dict([(k,data.get(k)) for k in self.fields])              
       pk = self.pk
-      if self.pk_seq and d[pk] is None:
+      if self.pk_seq and d.get(pk,None) is None:
          d[pk] = self.next_id()
-      return self.db.query(sql.insert(self.table, d, returning))
+      return self.db.query_one(sql.insert(self.table, d, returning))
 
    def update(self, data, **kw):
       q = {}

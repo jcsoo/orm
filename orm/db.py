@@ -1,5 +1,5 @@
 from collections import namedtuple
-from table import Record
+from table import Table, Record
 import sql
 
 class DBTest(object):
@@ -110,3 +110,13 @@ class DB(object):
       rows = self.query(*args, **kw)
       for r in rows:
          yield r
+
+   def add_tables(self, module):
+      for k in dir(module):
+         t = getattr(module,k)
+         if type(t) is type and t is not Table and issubclass(t,Table):
+            n = t.get_name()
+            self.tables[n] = t(self)
+      return self.tables
+
+      
