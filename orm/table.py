@@ -251,7 +251,7 @@ class Table(object):
          yield r
 
    def insert(self, data, returning='*'):
-      d = dict([(k,data.get(k)) for k in self.fields])              
+      d = dict([(k,data[k]) for k in self.fields if k in data])
       pk = self.pk
       if self.pk_seq and d.get(pk,None) is None:
          d[pk] = self.next_id()

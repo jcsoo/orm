@@ -111,12 +111,16 @@ class DB(object):
       for r in rows:
          yield r
 
+   def add_table(self, tclass):
+      n = tclass.get_name()
+      self.tables[n] = tclass(self)
+      setattr(self, n, self.tables[n])
+         
    def add_tables(self, module):
       for k in dir(module):
          t = getattr(module,k)
          if type(t) is type and t is not Table and issubclass(t,Table):
-            n = t.get_name()
-            self.tables[n] = t(self)
+            self.add_table(t)
       return self.tables
 
       
