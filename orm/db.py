@@ -7,13 +7,21 @@ class DBTest(object):
       return statement
 
 class DB(object):
-   def __init__(self, pool, commit_on_exit=False):
+   def __init__(self, pool, commit_on_exit=False, tables=[], modules=[]):
       self.pool = pool
       self.conn = None
       self.in_context = True
       self.commit_on_exit = commit_on_exit
       self.tables = {}
+      self.modules = {}
       self.debug = False
+      if tables:
+         for t in tables:
+            self.add_tables(t)
+      if modules:
+         for m in modules:
+            self.use_module(m)
+
 
    def __len__(self):
       return len(self.tables)
@@ -122,5 +130,10 @@ class DB(object):
          if type(t) is type and t is not Table and issubclass(t,Table):
             self.add_table(t)
       return self.tables
+
+   def use_module(self, module):
+      module.db = self
+      self.modules[module.__name__] = module
+      setattr(self, module.__name__, module)
 
       
