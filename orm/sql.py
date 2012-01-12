@@ -25,8 +25,10 @@ def escape(v,blank_null=True):
       return v.s
    elif t in (int, long):
       return '%d' % v
-   elif t in (float, decimal.Decimal):
+   elif t in (float,):
       return str(v)
+   elif t in (decimal,):
+      return escape(str(v))
    elif t == list:
       return 'ARRAY[%s]' % ','.join([escape(x,blank_null) for x in v])      
    elif t == tuple:
