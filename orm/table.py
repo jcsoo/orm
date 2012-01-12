@@ -273,3 +273,30 @@ class Table(object):
       if self.pk_seq:
          return self.db.query_value('select nextval({pk_seq})',pk_seq=self.pk_seq)
 
+   def add_tags(self, tags, field, **kw):
+      tags = sql.to_list(tags)
+      for r in self.select(**kw):
+         t_arr = r[field]
+         if t_arr is None:
+            t_arr = []
+         modified = False
+         for t in tags:
+            if t not in t_arr:
+               t_arr.append(t)
+               modified = True
+         if modified:
+            self.update({field : t_arr},_id=r._id)
+
+   def remove_tags(self, tags, field, **kw):
+      tags = sql.to_list(tags)
+      for r in self.select(**kw):
+         t_arr = r[field]
+         if not t_arr:
+            continue      
+         modified = False
+         for t in tags:
+            if t in t_arr:
+               t_arr.remove(t)
+               modified = True
+         if modified:
+            self.update({field : t_arr},_id=r._id)      
