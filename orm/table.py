@@ -99,7 +99,6 @@ class Table(object):
 
    def __init__(self, db):
       self.db = db
-      self.db.tables[self.__class__.get_name()] = self
 
    def __str__(self):
       return self.__class__.get_name()
@@ -300,3 +299,4 @@ class Table(object):
                modified = True
          if modified:
             self.update({field : t_arr},_id=r._id)      
+
