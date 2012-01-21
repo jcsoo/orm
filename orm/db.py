@@ -127,7 +127,7 @@ class DB(object):
    def add_tables(self, module):
       for k in dir(module):
          t = getattr(module,k)
-         if type(t) is type and t is not Table and issubclass(t,Table) and getattr(t,'name'):
+         if type(t) is type and t is not Table and issubclass(t,Table) and getattr(t,'name') and getattr(t,'table'):
             self.add_table(t)
       return self.tables
 
