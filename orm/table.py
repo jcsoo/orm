@@ -254,7 +254,10 @@ class Table(object):
          yield r
 
    def insert(self, data, returning='*'):
-      d = dict([(k,data[k]) for k in self.fields if k in data])
+      if isinstance(data, dict):
+         d = dict([(k,data[k]) for k in self.fields if k in data])
+      else:
+         d = dict([(k,getattr(data,k)) for k in self.fields if hasattr(data,k)])      
       pk = self.pk
       if self.pk_seq and d.get(pk,None) is None:
          d[pk] = self.next_id()
@@ -267,7 +270,7 @@ class Table(object):
       return self.db.query(sql.update(self.table, data, **q))
    
    def delete(self, **kw):
-      q= {}
+      q = {}
       q.update(kw)
       q['_where'] = self.where(q)
       return self.db.query(sql.delete(self.table, **q))
@@ -324,6 +327,61 @@ class VersionedTable(Table):
          self.head_table = self.head_class(db)
       else:
          self.head_table = None
+
+   def _clear_flags(self, r, data):
+      s = super(VersionedTable,self)
+      if data.get('is_published'):
+         s.update({'is_published' : False}, id=r.id)
+      if data.get('is_staged'):
+         s.update({'is_staged' : False}, id=r.id)
+      if data.get('is_head'):
+         s.update({'is_head' : False}, id=r.id)
+
+         
+   def _materialize_record(self, r):
+      if self.live_class:
+         self.live_table.delete(id=r.id)
+         if r.is_published:
+            self.live_table.insert(r.as_dict())
+      if self.staging_class:
+         self.staging_table.delete(id=r.id)
+         if r.is_staged:
+            self.staging_table.insert(r)
+      if self.head_class:
+         self.head_table.delete(id=r.id)
+         if r.is_head:
+            self.head_table.insert(r)
+
+   def _dematerialize_record(self, r):
+      if self.live_table:
+         self.live_table.delete(version_id=r.version_id)
+      if self.staging_table:
+         self.staging_table.delete(version_id=r.version_id)
+      if self.head_table:
+         self.head_table.delete(version_id=r.version_id)
+            
+   def _select_affected(self, **kw):
+      kw['_fields'] = '*'
+      return self.select(**kw)
+
+   def insert(self, data, **kw):      
+      r = super(VersionedTable, self).insert(data, **kw)
+      self._materialize_record(r)
+      return r
+
+   def update(self, data, **kw):
+      for m in self._select_affected(**kw):
+         self._clear_flags(m, data)
+      r = super(VersionedTable, self).update(data, **kw)
+      for m in self._select_affected(**kw):
+         self._materialize_record(m)
+      return r
+   
+   def delete(self, **kw):
+      for m in self._select_affected(**kw):
+         self._dematerialize_record(m)
+      r = super(VersionedTable, self).delete(**kw)
+      return r
 
    def get_active_version(self, version_id):
       # returns active version_id
