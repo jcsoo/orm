@@ -275,9 +275,11 @@ class Table(object):
       q['_where'] = self.where(q)
       return self.db.query(sql.delete(self.table, **q))
 
-   def next_id(self):
-      if self.pk_seq:
-         return self.db.query_value('select nextval({pk_seq})',pk_seq=self.pk_seq)
+   def next_id(self, seq=None):
+      if seq is None:
+         seq = self.pk_seq
+      if seq:
+         return self.db.query_value('select nextval({pk_seq})',pk_seq=seq)
 
    def add_tags(self, tags, field, **kw):
       tags = sql.to_list(tags)
@@ -339,6 +341,9 @@ class VersionedTable(Table):
       return self.select(**kw)
 
    def insert(self, data, **kw):      
+      data = dict(data)
+      if not data.get('id'):
+         data['id'] = self.next_id(self.id_seq)
       r = super(VersionedTable, self).insert(data, **kw)
       self._materialize_record(r)
       return r
