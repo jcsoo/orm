@@ -328,16 +328,6 @@ class VersionedTable(Table):
       else:
          self.head_table = None
 
-   def _clear_flags(self, r, data):
-      s = super(VersionedTable,self)
-      if data.get('is_published'):
-         s.update({'is_published' : False}, id=r.id)
-      if data.get('is_staged'):
-         s.update({'is_staged' : False}, id=r.id)
-      if data.get('is_head'):
-         s.update({'is_head' : False}, id=r.id)
-
-         
    def _materialize_record(self, r):
       if self.live_class:
          self.live_table.delete(id=r.id)
@@ -353,11 +343,11 @@ class VersionedTable(Table):
             self.head_table.insert(r)
 
    def _dematerialize_record(self, r):
-      if self.live_table:
+      if self.live_table and r.is_published:
          self.live_table.delete(version_id=r.version_id)
-      if self.staging_table:
+      if self.staging_table and r.is_staged:
          self.staging_table.delete(version_id=r.version_id)
-      if self.head_table:
+      if self.head_table and r.is_head:
          self.head_table.delete(version_id=r.version_id)
             
    def _select_affected(self, **kw):
@@ -370,8 +360,6 @@ class VersionedTable(Table):
       return r
 
    def update(self, data, **kw):
-      for m in self._select_affected(**kw):
-         self._clear_flags(m, data)
       r = super(VersionedTable, self).update(data, **kw)
       for m in self._select_affected(**kw):
          self._materialize_record(m)
@@ -380,79 +368,5 @@ class VersionedTable(Table):
    def delete(self, **kw):
       for m in self._select_affected(**kw):
          self._dematerialize_record(m)
-      r = super(VersionedTable, self).delete(**kw)
-      return r
-
-   def get_active_version(self, version_id):
-      # returns active version_id
-      return self.select_one(id=version_id,active=True)
-
-   def is_version_readonly(self, version):      
-      return (not version.is_head) or (version.is_staged or version.is_published)
-
-   def create_version(self, data):
-      # creates new version, returns version_id
-      return self.insert(data).version_id
-
-   def copy_version(self, version_id, data):
-      v = self[version_id]
-      self.update({'is_head' : False}, id=v.id)
-      d = v.as_dict()
-      del d['version_id']
-      d.update(data)
-      d['is_head'] = True
-      d['is_staged'] = False
-      d['is_published'] = False
-      return self.insert(d).version_id
-
-   def update_version(self, version_id, data):
-      # updates version, creating new version if needed, marking version active, returns version_id
-      a = self[version_id]
-      if self.is_version_readonly(a):
-         return self.copy_version(a.version_id,data)
-      else:
-         self.update(data, version_id=version_id)
-         return version_id
-
-   def stage_version(self, version_id):
-      v = self[version_id]
-      self.unstage(v.id)
-      self.update({'is_staged' : True}, version_id=v.version_id)
-      if self.staging_table:
-         d = v.as_dict()      
-         for k in ['is_head','is_staged','is_published']:
-            del d[k]
-         self.staging_table.insert(d)
-      return v.version_id
-         
-      
-   def unstage_version(self, version_id):
-      v = self[version_id]
-      self.unstage(v.id)
-
-   def unstage(self, id):
-      self.update({'is_staged' : False}, id=id)
-      if self.staging_table:
-         self.staging_table.delete(id=id)
-
-   def publish_version(self, version_id):
-      v = self[version_id]
-      self.unpublish(v.id)
-      self.update({'is_published' : True}, version_id=v.version_id)
-      if self.live_table:
-         d = v.as_dict()      
-         for k in ['is_head','is_staged','is_published']:
-            del d[k]
-         self.live_table.insert(d)
-      return v.version_id
-
-   def unpublish_version(self, version_id):
-      v = self[version_id]
-      self.unpublish(v.id)
-
-   def unpublish(self, id):
-      self.update({'is_published' : False}, id=id)
-      if self.live_table:
-         self.live_table.delete(id=id)
-
+      return super(VersionedTable, self).delete(**kw)
 
