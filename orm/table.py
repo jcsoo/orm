@@ -309,48 +309,32 @@ class Table(object):
 
 
 class VersionedTable(Table):
+   views = []
    live_class = None
    staging_class = None
    test_class = None
 
    def __init__(self, db):
       super(VersionedTable, self).__init__(db)
-      if self.live_class:
-         self.live_table = self.live_class(db)
-      else:
-         self.live_table = None
-      if self.staging_class:
-         self.staging_table = self.staging_class(db)
-      else:
-         self.staging_table = None
-      if self.test_class:
-         self.test_table = self.test_class(db)
-      else:
-         self.test_table = None
+      for v in self.views:
+         cls = getattr(self, '%s_class' % v)
+         if cls:
+            setattr(self, '%s_table' % v, cls(db))                  
 
    def _materialize_record(self, r):
-      if self.live_class:
-         self.live_table.delete(id=r.id)
-         if r.on_live:
-            self.live_table.insert(r.as_dict())
-      if self.staging_class:
-         self.staging_table.delete(id=r.id)
-         if r.on_staging:
-            self.staging_table.insert(r)
-      if self.test_class:
-         self.test_table.delete(id=r.id)
-         if r.on_test:
-            self.test_table.insert(r)
+      for v in self.views:
+         t = getattr(self, '%s_table' % v)
+         t.delete(id=r.id)
+         if getattr(r, 'on_%s' % v):
+            t.insert(r.as_dict())
 
    def _dematerialize_record(self, r):
-      if self.live_table and r.on_live:
-         self.live_table.delete(vid=r.vid)
-      if self.staging_table and r.on_staging:
-         self.staging_table.delete(vid=r.vid)
-      if self.test_table and r.on_test:
-         self.test_table.delete(vid=r.vid)
+      for v in self.views:
+         if getattr(r,'on_%s' % v):
+            getattr(self, '%s_table' % v).delete(vid=r.vid)
             
    def _select_affected(self, **kw):
+      kw = dict(kw)
       kw['_fields'] = '*'
       return self.select(**kw)
 
