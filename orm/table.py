@@ -311,7 +311,7 @@ class Table(object):
 class VersionedTable(Table):
    live_class = None
    staging_class = None
-   head_class = None
+   test_class = None
 
    def __init__(self, db):
       super(VersionedTable, self).__init__(db)
@@ -323,32 +323,32 @@ class VersionedTable(Table):
          self.staging_table = self.staging_class(db)
       else:
          self.staging_table = None
-      if self.head_class:
-         self.head_table = self.head_class(db)
+      if self.test_class:
+         self.test_table = self.test_class(db)
       else:
-         self.head_table = None
+         self.test_table = None
 
    def _materialize_record(self, r):
       if self.live_class:
          self.live_table.delete(id=r.id)
-         if r.is_published:
+         if r.on_live:
             self.live_table.insert(r.as_dict())
       if self.staging_class:
          self.staging_table.delete(id=r.id)
-         if r.is_staged:
+         if r.on_staging:
             self.staging_table.insert(r)
-      if self.head_class:
-         self.head_table.delete(id=r.id)
-         if r.is_head:
-            self.head_table.insert(r)
+      if self.test_class:
+         self.test_table.delete(id=r.id)
+         if r.on_test:
+            self.test_table.insert(r)
 
    def _dematerialize_record(self, r):
-      if self.live_table and r.is_published:
-         self.live_table.delete(version_id=r.version_id)
-      if self.staging_table and r.is_staged:
-         self.staging_table.delete(version_id=r.version_id)
-      if self.head_table and r.is_head:
-         self.head_table.delete(version_id=r.version_id)
+      if self.live_table and r.on_live:
+         self.live_table.delete(vid=r.vid)
+      if self.staging_table and r.on_staging:
+         self.staging_table.delete(vid=r.vid)
+      if self.test_table and r.on_test:
+         self.test_table.delete(vid=r.vid)
             
    def _select_affected(self, **kw):
       kw['_fields'] = '*'
