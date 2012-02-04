@@ -40,7 +40,7 @@ def escape(v,blank_null=True):
    elif t == type(''):
       if blank_null and v == '':
          return 'null'
-      return "'" + v.replace("'","\'")+"'"
+      return "'" + v.replace("'","\'\'")+"'"
    else:
       return escape(unicode(v),blank_null)
 
