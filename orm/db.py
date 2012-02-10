@@ -102,12 +102,13 @@ class DB(object):
       cursor = self.execute(statement, *args, **kw)
       if cursor.description is None:
          return None
+      fields = [f[0] for f in cursor.description]
       cls = kw.get('_factory',None)
       if cls is None:
-         cls = namedtuple('Record',[f[0] for f in cursor.description])
+         cls = namedtuple('Record',fields)
          return [cls(*r) for r in cursor.fetchall()]
       else:
-         return [cls(self, *r) for r in cursor.fetchall()]
+         return [cls(self, *zip(fields,r)) for r in cursor.fetchall()]
 
    def query_one(self, statement, *args, **kw):
       rows = self.query(statement, *args, **kw)

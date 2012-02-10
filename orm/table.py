@@ -19,8 +19,10 @@ class Record(object):
             print 'fields',fields
             print 'args',args
             raise Exception('Incorrect number of arguments to __init__ - %d expected, %d received' % (len(fields), len(args)))
-         for i in range(len(fields)):
-            setattr(self, fields[i], args[i])
+         for k,v in args:
+            if k not in fields:
+               raise Exception('Unexpected field %s' % k)
+            setattr(self, k, v)
       else:
          for k in fields:
             setattr(self, k, None)
@@ -77,6 +79,9 @@ class Record(object):
       for k in self._table.fields:
          d[k] = getattr(self,k)
       return d
+
+   def _as_dict(self):
+      return self.as_dict()
 
    def update(self, data):
       self._table.update(data, _id=self._id)
@@ -327,8 +332,8 @@ class VersionedTable(Table):
       for v in self.views:
          t = getattr(self, '%s_table' % v)
          t.delete(id=r.id)
-         if getattr(r, 'on_%s' % v):
-            t.insert(r.as_dict())
+         if getattr(r,'on_%s' % v):
+            t.insert(r)
 
    def _dematerialize_record(self, r):
       for v in self.views:
