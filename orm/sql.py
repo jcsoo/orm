@@ -3,7 +3,7 @@ import re, sys, datetime, decimal
 FILL_RE = re.compile('{(.*?)}')
 
 class Literal(object):
-   def __init__(s):
+   def __init__(self, s):
       self.s = s
 
    def __str__(self):
