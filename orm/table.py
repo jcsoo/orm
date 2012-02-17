@@ -364,3 +364,8 @@ class VersionedTable(Table):
          self._dematerialize_record(m)
       return super(VersionedTable, self).delete(**kw)
 
+   def is_active(self, v):
+      if v:
+         return ['(on_staging is true or on_live is true)']
+      else:
+         return ['not (on_staging is true or on_live is true)']
