@@ -15,7 +15,7 @@ def literal(s):
 def escape_field(v):
    if v.find('"') >= 0:
       raise Exception('Invalid field identifier: %s' % v)
-   return '.'.join(['"%s"' % t for t in v.split('.')])
+   return '.'.join(['"%s"' % t for t in v.split('.')]).encode('utf8')
 
 def escape(v,blank_null=True):     
    t = type(v)
