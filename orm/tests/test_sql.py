@@ -10,11 +10,11 @@ class SQLTestCase(unittest.TestCase):
       self.assertEquals(escape(u''),"null")
       self.assertEquals(escape(u'',False),"''")
       self.assertEquals(escape('abc'),"'abc'")
-      self.assertEquals(escape("a'bc"),"'a\'bc'")
+      self.assertEquals(escape("a'bc"),"'a\'\'bc'")
       self.assertEquals(escape(123),"123")
       self.assertEquals(escape(123L),"123")
       self.assertEquals(escape(123.456),"123.456")
-      self.assertEquals(escape(decimal.Decimal('123.456')),"123.456")
+      self.assertEquals(escape(decimal.Decimal('123.456')),"'123.456'")
       self.assertEquals(escape(datetime.date(2011,12,13)),"'2011-12-13'")
       self.assertEquals(escape(datetime.datetime(2011,12,13,1,2,3,123456)),"'2011-12-13 01:02:03.123456'")     
 

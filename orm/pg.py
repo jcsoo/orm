@@ -1,7 +1,6 @@
-import decimal, re
+import decimal, re, os
 import psycopg2, psycopg2.pool
 psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
-
 
 def cast_money(value, cur):
    if value is None:
@@ -38,8 +37,12 @@ def parse_url(s):
    return d
 
 
-def make_pool_url(minconn, maxconn, url):
-   return psycopg2.pool.SimpleConnectionPool(minconn,maxconn,**parse_url(url))
-
-def make_pool(minconn, maxconn, **kw):
+def connect_pool(minconn, maxconn, **kw):
+   if 'url' in kw:
+      kw = parse_url(kw.pop('url'))
    return psycopg2.pool.SimpleConnectionPool(minconn,maxconn,**kw)
+
+def connect(**kw):
+   if 'url' in kw:
+      kw = parse_url(kw.pop('url'))
+   return psycopg2.connect(**kw)

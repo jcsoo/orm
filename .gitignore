@@ -1,6 +1,9 @@
 .Python
 .env
 *.pyc
+bin/
+include/
+lib/
 env/
 build/
 dist/

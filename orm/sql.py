@@ -110,23 +110,21 @@ def compile_clause(c):
    else:
       return c
 
-def id_clause(pk,pk_value):
-   if type(pk) == tuple:
-      o_list = ['or']
-      for v in to_list(pk_value):
-         if type(v) != tuple or len(v) != len(pk):
-            raise Exception('primary key value must be tuple of length %s' % len(pk))
-         c_list = ['and']
-         for i in range(len(v)):
-            c_list.append(('=',pk[i],v[i]))
-         o_list.append(tuple(c_list))
-      return tuple(o_list)
-   else:
-      if type(pk_value) == list:
-         return ('=',pk,tuple(pk_value))
+def id_clause(pk, pk_value):
+   if type(pk_value) == list:
+      if type(pk) == tuple:
+         return tuple(['or'] + [id_clause(pk,v) for v in pk_value])
       else:
-         return ('=',pk,pk_value)
-      
+         return ('=', pk, tuple(pk_value))
+   elif type(pk) == tuple:
+      if type(pk_value) != tuple or len(pk) != len(pk_value):
+         raise Exception('primary key value must be tuple of length %d' % len(pk))
+      c_list = ['and']
+      for i in range(len(pk_value)):
+         c_list.append(('=',pk[i],pk_value[i]))
+      return tuple(c_list)
+   else:
+      return ('=',pk,pk_value)       
 
 def make_clause(c):
    if type(c) == tuple:

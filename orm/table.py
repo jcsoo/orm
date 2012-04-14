@@ -1,100 +1,10 @@
 import sql
 
-def register_type(tclass, rclass=None):
-   if rclass is None:
-      rclass = Record
-   tclass.rclass = rclass
-
 class NotExist(object):
    pass
 
-class Record(object):
-   def __init__(self, db, table, *args, **kw):
-      self._db = db
-      self._table = table
-      self._cache = {}
-      fields = self._table.fields
-      if args:
-         if len(args) != len(fields):
-            print 'fields',fields
-            print 'args',args
-            raise Exception('Incorrect number of arguments to __init__ - %d expected, %d received' % (len(fields), len(args)))
-         for k,v in args:
-            if k not in fields:
-               raise Exception('Unexpected field %s' % k)
-            setattr(self, k, v)
-      else:
-         for k in fields:
-            setattr(self, k, None)
-         for k,v in kw.items():
-            setattr(self, k, v)
-
-   def __getitem__(self, k):
-      v = self.get(k, NotExist)
-      if v == NotExist:
-         if hasattr(self, k):
-            return getattr(self, k)
-         else:
-            raise KeyError(k)
-      return v
-
-   def __setitem__(self, k, v):
-      self.set(k,v)
-
-   def __contains__(self, key):
-      return self.has_key(key)
-
-   def get(self, k, default=None):
-      return getattr(self, k, default)
-
-   def set(self, k, v):
-      setattr(self, k, v)
-
-   def keys(self):
-      return self._table.fields
-
-   def items(self):
-      return [(k,getattr(self,k)) for k in self.keys()]
-
-   def has_key(self, key):
-      return hasattr(self, key)
-
-
-   @property
-   def _id(self):
-      pk = self._table.pk
-      if type(pk) == tuple:
-         return tuple([getattr(self,k) for k in pk])
-      else:
-         return getattr(self, pk)
-
-   def __repr__(self):
-      return self.__str__()
-
-   def __str__(self):      
-      return self.__class__.__name__+ '(' + ', '.join(['%s=%s' % (k,repr(getattr(self,k))) for k in self._table.fields if k[0] != '_' and getattr(self,k) is not None])+')'
-
-   def as_dict(self):
-      d = {}
-      for k in self._table.fields:
-         d[k] = getattr(self,k)
-      return d
-
-   def _as_dict(self):
-      return self.as_dict()
-
-   def update(self, data):
-      self._table.update(data, _id=self._id)
-      for k in self._table.fields:
-         if k in data:
-            setattr(self, k, data[k])
-
-   def updated(self, data):
-      self.update(data)
-      return self._table[self._id]
-
-   def delete(self):
-      return self._table.delete(_id=self._id)
+class Record(dict):
+   pass
 
 class Table(object):
    rclass = Record
@@ -162,18 +72,6 @@ class Table(object):
          elif k in self.fields:
             flist.append(('=',k,kw[k]))
             continue
-      return flist
-
-
-   def filter_old(self, kw):
-      flist = [('=',k,kw.pop(k)) for k in self.fields if k in kw]
-      if '_id' in kw:
-         flist.append(sql.id_clause(self.pk, kw.pop('_id')))
-      for k in kw:
-         if hasattr(self, k):
-            f = getattr(self,k)(kw[k])
-            if f:
-               flist.append(f)
       return flist
 
    def where(self, kw):      
@@ -281,91 +179,7 @@ class Table(object):
       return self.db.query(sql.delete(self.table, **q))
 
    def next_id(self, seq=None):
-      if seq is None:
-         seq = self.pk_seq
+      seq = seq or self.pk_seq
       if seq:
          return self.db.query_value('select nextval({pk_seq})',pk_seq=seq)
 
-   def add_tags(self, tags, field, **kw):
-      tags = sql.to_list(tags)
-      for r in self.select(**kw):
-         t_arr = r[field]
-         if t_arr is None:
-            t_arr = []
-         modified = False
-         for t in tags:
-            if t not in t_arr:
-               t_arr.append(t)
-               modified = True
-         if modified:
-            self.update({field : t_arr},_id=r._id)
-
-   def remove_tags(self, tags, field, **kw):
-      tags = sql.to_list(tags)
-      for r in self.select(**kw):
-         t_arr = r[field]
-         if not t_arr:
-            continue      
-         modified = False
-         for t in tags:
-            if t in t_arr:
-               t_arr.remove(t)
-               modified = True
-         if modified:
-            self.update({field : t_arr},_id=r._id)      
-
-
-class VersionedTable(Table):
-   views = []
-   live_class = None
-   staging_class = None
-   test_class = None
-
-   def __init__(self, db):
-      super(VersionedTable, self).__init__(db)
-      for v in self.views:
-         cls = getattr(self, '%s_class' % v)
-         if cls:
-            setattr(self, '%s_table' % v, cls(db))                  
-
-   def _materialize_record(self, r):
-      for v in self.views:
-         t = getattr(self, '%s_table' % v)
-         t.delete(id=r.id)
-         if getattr(r,'on_%s' % v):
-            t.insert(r)
-
-   def _dematerialize_record(self, r):
-      for v in self.views:
-         if getattr(r,'on_%s' % v):
-            getattr(self, '%s_table' % v).delete(vid=r.vid)
-            
-   def _select_affected(self, **kw):
-      kw = dict(kw)
-      kw['_fields'] = '*'
-      return self.select(**kw)
-
-   def insert(self, data, **kw):      
-      data = dict(data)
-      if not data.get('id'):
-         data['id'] = self.next_id(self.id_seq)
-      r = super(VersionedTable, self).insert(data, **kw)
-      self._materialize_record(r)
-      return r
-
-   def update(self, data, **kw):
-      r = super(VersionedTable, self).update(data, **kw)
-      for m in self._select_affected(**kw):
-         self._materialize_record(m)
-      return r
-   
-   def delete(self, **kw):
-      for m in self._select_affected(**kw):
-         self._dematerialize_record(m)
-      return super(VersionedTable, self).delete(**kw)
-
-   def is_active(self, v):
-      if v:
-         return ['(on_staging is true or on_live is true)']
-      else:
-         return ['not (on_staging is true or on_live is true)']
