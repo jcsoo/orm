@@ -174,10 +174,11 @@ def select(**kw):
       s.append('order by %s' % kw.get('_order'))
 
    if kw.get('_limit'):
-      s.append('limit %s' % kw.get('_limit'))
+      s.append('limit %s' % int(kw.get('_limit')))
 
    if kw.get('_offset'):
-      s.append('offset %s' % kw.get('_offset'))
+      s.append('offset %s' % int(kw.get('_offset')))
+
    return ' '.join([c for c in s if c])
 
 def insert(table, data, returning=None):

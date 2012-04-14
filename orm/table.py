@@ -3,14 +3,10 @@ import sql
 class NotExist(object):
    pass
 
-class Record(dict):
-   pass
-
 class Table(object):
-   rclass = Record
    name = None
    table = None
-   fields = []
+   fields = None
    pk = None
    pk_seq = None
 
@@ -40,8 +36,14 @@ class Table(object):
       else:
          return r[k]
       
-   def record(self, db, *args, **kw):
-      return self.rclass(db, self, *args)
+   def from_db(self, d):
+      return d
+   
+   def to_db(self, d):
+      return d
+      
+   def record(self, args):
+      return self.from_db(dict(args))
 
    def get(self, k, default=None):
       r = self.select_one(_where=sql.id_clause(self.pk,k))
@@ -69,9 +71,11 @@ class Table(object):
          elif k == '_id':
             flist.append(sql.id_clause(self.pk, kw.pop('_id')))
             continue
-         elif k in self.fields:
+         elif self.fields:
             flist.append(('=',k,kw[k]))
             continue
+         elif k and k[0] != '_':
+            flist.append(('=',k,kw[k]))
       return flist
 
    def where(self, kw):      
@@ -157,20 +161,16 @@ class Table(object):
          yield r
 
    def insert(self, data, returning='*'):
-      if isinstance(data, dict):
-         d = dict([(k,data[k]) for k in self.fields if k in data])
-      else:
-         d = dict([(k,getattr(data,k)) for k in self.fields if hasattr(data,k)])      
       pk = self.pk
-      if self.pk_seq and d.get(pk,None) is None:
-         d[pk] = self.next_id()
-      return self.db.query_one(sql.insert(self.table, d, returning))
+      if self.pk_seq and data.get(pk,None) is None:
+         data[pk] = self.next_id()
+      return self.db.query_one(sql.insert(self.table, self.to_db(data), returning))
 
    def update(self, data, **kw):
       q = {}
       q.update(kw)
       q['_where'] = self.where(q)
-      return self.db.query(sql.update(self.table, data, **q))
+      return self.db.query(sql.update(self.table, self.to_db(data), **q))
    
    def delete(self, **kw):
       q = {}

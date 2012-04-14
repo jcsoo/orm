@@ -1,7 +1,5 @@
 import sys
 
-from collections import namedtuple
-from table import Table, Record
 import sql
 
 class DBTest(object):
