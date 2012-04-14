@@ -15,6 +15,10 @@ class DB(object):
       self.tables = {}
       self.modules = {}
       self.debug = False
+      self.literal = sql.literal
+      self.fill = sql.fill
+      self.escape = sql.escape
+      self.escape_field = sql.escape_field
       if tables:
          for t in tables:
             self.add_tables(t)
