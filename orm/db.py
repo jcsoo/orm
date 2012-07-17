@@ -106,6 +106,8 @@ class DB(object):
       for r in self.query(*args, **kw):
          yield r
 
+   def next_id(self, sequence_name):
+      return self.query_value(sql.next_id(sequence_name))
       
 
       

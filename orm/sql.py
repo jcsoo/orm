@@ -210,3 +210,6 @@ def delete(table, **kw):
    if kw.get('_returning'):
       s.append('returning %s' % kw['_returning'])
    return ' '.join([c for c in s if c])   
+
+def next_id(sequence_name):
+   return fill('select nextval({sequence_name})',sequence_name=sequence_name)
