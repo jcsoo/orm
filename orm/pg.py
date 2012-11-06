@@ -31,7 +31,10 @@ def parse_url(s):
          else:
             d['user'] = n_arr[0]
       else:
-         d['host'] = u.netloc
+         h_arr = u.netloc.split(':')
+         d['host'] = h_arr[0]
+         if len(h_arr) > 1:
+            d['port'] = int(h_arr[1])
    if u.path:
       d['database'] = u.path[1:]
    return d
