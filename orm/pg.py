@@ -23,7 +23,10 @@ def parse_url(s):
       n = u.netloc
       if '@' in n:
          n_arr = n.split('@')
-         d['host'] = n_arr[1]
+         host_arr = n_arr[1].split(':')
+         d['host'] = host_arr[0]
+         if len(host_arr) > 1:
+            d['port'] = int(host_arr[1])
          if ':' in n_arr[0]:
             p_arr = n_arr[0].split(':')
             d['user'] = p_arr[0]
